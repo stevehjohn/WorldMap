@@ -1,0 +1,183 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8"/>
+    <title>Release Window Map</title>
+    <!-- ReSharper disable MarkupAttributeTypo -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <!-- ReSharper disable Html.PathError -->
+    <script src="scripts/d3.min.js"></script>
+    <script src="scripts/topojson.min.js"></script>
+    <script src="scripts/datamaps.world.hires.min.js"></script>
+    <script src="scripts/suncalc.js"></script>
+    <!-- ReSharper restore Html.PathError -->
+    <!-- ReSharper restore MarkupAttributeTypo -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #131313;
+            font-family: "Lucida Console", Monaco, monospace;
+            overflow-x: hidden;
+            overflow-y: hidden;
+        }
+
+        /* ReSharper disable once CssBrowserCompatibility */
+        div.country:last-child { margin-right: 10px; }
+
+        div#container {
+            width: 100%;
+            height: 100vh;
+        }
+
+        div#beer {
+            position: absolute;
+            top: 0;
+            height: 100vh;
+            width: 2px;
+            background-color: #009900;
+            /* ReSharper disable once CssBrowserCompatibility */
+            opacity: 0.4;
+            z-index: 100000;
+        }
+
+        div#time {
+            position: absolute;
+            top: 0;
+            height: 100vh;
+            width: 2px;
+            background-color: #ffc300;
+            /* ReSharper disable once CssBrowserCompatibility */
+            opacity: 0.4;
+            z-index: 100000;
+        }
+
+        div.daytime {
+            position: absolute;
+            top: 0;
+            height: 100vh;
+            /* ReSharper disable once CssBrowserCompatibility */
+            background-image: linear-gradient(to right, #131313, #ffc300, #131313);
+            /* ReSharper disable once CssBrowserCompatibility */
+            opacity: 0.225;
+            z-index: 100000;
+            border-left: #8a2be2 2px solid;
+            border-right: #8a2be2 2px solid;
+        }
+
+        pre {
+            margin: 0;
+            font-size: large;
+        }
+
+        .legend {
+            position: absolute;
+            left: 5%;
+            top: 85%;
+            /* ReSharper disable once RequiresFallbackColor */
+            /* ReSharper disable once CssBrowserCompatibility */
+            background-color: rgba(80, 80, 80, 0.31);
+            padding: 4px 20px;
+            z-index: 999999;
+        }
+
+        div#version {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            z-index: 99999;
+            color: #a00000;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<div id="time"></div>
+<div id="beer"></div>
+<div id="daytime-1" class="daytime"></div>
+<div id="daytime-2" class="daytime"></div>
+<div id="daytime-3" class="daytime"></div>
+<div class="legend">
+    <pre><span style="color: #ffc300">&#xff0d;</span> <span style="color: #19a7e9">High Noon</span>
+<span style="color: #009900">&#xff0d;</span> <span style="color: #19a7e9">Beer o'Clock</span>
+<span style="color: #8a2be2">&#xff0d;</span> <span style="color: #19a7e9">Sunrise / Sunset</span></pre>
+</div>
+<div id="version">1.5 2019.06.06</div>
+<script>
+    var map;
+
+    function draw() {
+        map = new window.Datamap({
+            element: document.getElementById('container'),
+            fills: {
+                defaultFill: '#000000'
+            },
+            geographyConfig: {
+                highlightOnHover: false,
+                popupOnHover: false,
+                borderColor: '#14517a'
+            },
+            projection: 'mercator'
+        });
+    }
+
+    function getXPositionForTime(seconds) {
+        const width = window.innerWidth;
+
+        var x = (width / 86400) * seconds % width;
+        if (x < 0) {
+            x += width;
+        }
+        x = width - x;
+
+        return x;
+    }
+
+    function secondsSinceMidnight(date) {
+        return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+    }
+
+    function update() {
+        var date = new Date();
+
+        var now = date.getUTCHours() * 3600 + date.getUTCMinutes() * 60 + date.getSeconds();
+
+        now = secondsSinceMidnight(date);
+
+        var middayLine = document.getElementById('time');
+        var left = getXPositionForTime(now + 650);
+        middayLine.setAttribute('style', `left: ${left}px;`);
+
+        var beerLine = document.getElementById('beer');
+        left = getXPositionForTime(now - 17350);
+        beerLine.setAttribute('style', `left: ${left}px;`);
+
+        const sun = SunCalc.getTimes(date, 51.4545, -2.5879); // Brizzle lat/long
+
+        const sunrise = secondsSinceMidnight(sun.sunrise);
+        const sunset = secondsSinceMidnight(sun.sunset);
+
+        const sunlightWidth = (sunset - sunrise) / 86400 * window.innerWidth;
+
+        const leftOfNoon = 43200 - sunrise;
+
+        left = getXPositionForTime(now + 650 + leftOfNoon);
+
+        var daytime = document.getElementById('daytime-1');
+        daytime.setAttribute('style', `left: ${left}px; width: ${sunlightWidth}px;`);
+        daytime = document.getElementById('daytime-2');
+        daytime.setAttribute('style', `left: ${left + window.innerWidth}px; width: ${sunlightWidth}px;`);
+        daytime = document.getElementById('daytime-3');
+        daytime.setAttribute('style', `left: ${left - window.innerWidth}px; width: ${sunlightWidth}px;`);
+    }
+
+    draw();
+
+    update();
+
+    setInterval(update, 500);
+
+</script>
+</body>
+</html>
