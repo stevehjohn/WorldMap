@@ -89,6 +89,11 @@
             color: #a00000;
             font-size: 10px;
         }
+
+        img#iss { 
+            position: absolute;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -103,7 +108,9 @@
 <span style="color: #009900">&#xff0d;</span> <span style="color: #19a7e9">Beer o'Clock</span>
 <span style="color: #8a2be2">&#xff0d;</span> <span style="color: #19a7e9">Sunrise / Sunset</span></pre>
 </div>
-<div id="version">1.5 2019.06.06</div>
+<div id="version">1.7 2019.06.27</div>
+<!-- ReSharper disable once Html.PathError -->
+<img src="img/iss.png" alt="ISS" id="iss" />
 <script>
     var map;
 
@@ -172,11 +179,32 @@
         daytime.setAttribute('style', `left: ${left - window.innerWidth}px; width: ${sunlightWidth}px;`);
     }
 
+    function updateIss() {
+        const xmlHttp = new XMLHttpRequest();
+
+        xmlHttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                const coords = JSON.parse(this.responseText);
+
+                const position = map.projection([coords.longitude, coords.latitude]);
+
+                const iss = document.getElementById('iss');
+                iss.setAttribute('style', `display: block; left: ${position[0] - iss.width / 2}px; top: ${position[1] - iss.height / 2}px;`);
+            }
+        }
+
+        xmlHttp.open('GET', 'https://api.wheretheiss.at/v1/satellites/25544', true);
+        xmlHttp.send();
+    }
     draw();
 
     update();
 
     setInterval(update, 500);
+
+    updateIss();
+
+    setInterval(updateIss, 5000);
 
 </script>
 </body>
